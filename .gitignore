@@ -16,6 +16,8 @@ cache/
 # Generated at runtime
 digital_twin/last_pose.json
 digital_twin/last_live_*.png
+digital_twin/*smoke*.png
+digital_twin/*diagnostic*.png
 
 # Large media (kept in OneDrive, not in git)
 *.mp4

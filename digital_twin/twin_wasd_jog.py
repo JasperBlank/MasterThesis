@@ -444,7 +444,10 @@ class LiveStereoTracker:
                 expected_line_px=None,
                 line_distance_max_px=40.0,
                 needle_width_max_px=80.0,
-                ema_alpha=0.4,
+                # Stereo ray-gap and CAD-axis gates reject bad detections, so
+                # smoothing each 2D tip here only adds lag and shrinks motion
+                # during insertion/retraction. Filter once in millimetres below.
+                ema_alpha=1.0,
                 require_pair=False,
                 require_border=False,
             )
@@ -1069,7 +1072,9 @@ def apply_live_needle_measurement(
         return current_extension_mm, initialized, "needle estimate rejected: %s" % rejection
 
     if initialized:
-        extension_mm = 0.25 * raw_extension + 0.75 * current_extension_mm
+        # Keep a small amount of damping for Hough endpoint jitter while
+        # following real needle travel closely at the 5 Hz pose-update rate.
+        extension_mm = 0.75 * raw_extension + 0.25 * current_extension_mm
     else:
         extension_mm = raw_extension
     update_needle_geometry(plotter, extension_mm)

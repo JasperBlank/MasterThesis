@@ -278,6 +278,12 @@ def _best_single_line(segments: List[np.ndarray], params: NeedleParams,
     if not scored:
         return None
     scored.sort(key=lambda t: t[0], reverse=True)
+    if params.expected_line_px is not None:
+        # The projected CAD axis can pass across tag edges beyond the physical
+        # needle tip. The longest in-band segment is the continuous metal edge;
+        # merging every collinear segment would incorrectly extend it into tags.
+        (x1, y1), (x2, y2) = _segment_endpoints(scored[0][1])
+        return [(x1, y1), (x2, y2)], 1
     best_angle = _segment_angle_deg(*scored[0][1])
     pts: List[Tuple[float, float]] = []
     n_support = 0

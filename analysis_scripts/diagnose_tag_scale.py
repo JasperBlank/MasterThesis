@@ -126,7 +126,10 @@ def main():
     ))
 
     calibration = stereo_probe_pose.load_calibration()
-    if calibration:
+    if calibration and calibration.get("step_mm") is None:
+        print("saved calibration holds a measured tag edge (%.4g mm), no stage-motion data to diagnose"
+              % float(calibration["tag_edge_mm"]))
+    elif calibration:
         saved_edge = float(calibration["tag_edge_mm"])
         step_mm = float(calibration["step_mm"])
         observed_units = step_mm / saved_edge

@@ -97,50 +97,59 @@ NE-300 "Just Infusion" (targets vasculature Ø 100–500 µm; needle channel ≈
 | `analysis_scripts/multiobjective_sweep.py` | Depth/FOV/reconstructability objectives vs D. |
 | `docs/supervisor_notes.md`, `docs/stereo_endoscope_baseline_report.md` | Specs + stereo theory. |
 
-## Probe-pose pipeline (state as of 2026-07-16)
+## Probe-pose pipeline (state as of 2026-07-16, post camera calibration)
 
-Scene: exactly **three 36h11 AprilTags, ids 1–3, coplanar on one sheet** (measured
-edge ≈ 2.61 mm — pending a ruler check). `stereo_probe_pose.py`:
+Scene: exactly **three 36h11 AprilTags, ids 1–3, coplanar on one sheet**.
+**Measured tag edge = 10.62 mm** (ruler, across the outside of the black border);
+white gap between adjacent tags = 2.14 mm. Print-ready tags: `docs/apriltags_10_62mm/`.
 
-1. Detects tags in both views (OpenCV aruco, sub-pixel corners).
-2. Recovers the sheet layout from the reference tag's homography (tag-edge units, no
-   manual measurements). Reference tag: id 2 (`--reference-id`).
-3. solvePnP (IPPE + LM refine) per camera with assumed f = 800 px, 720×720, no
-   distortion model.
-4. Probe frame = mean viewing axis + line between the two camera centers; tip =
-   their midpoint. Per-scope roll about the probe axis is reported.
-5. **Metric scale** comes from a one-time `--calibrate` run (moves one stage axis a
-   known 2 mm, measures the tip displacement in tag units; saved to
-   `tag_sheet_calibration.json`, auto-loaded afterwards). The alternative scale from
-   the known 5.178 mm camera separation is **ill-conditioned at working distance —
-   do not rely on it**; it is printed only as a cross-check.
+- **Accepted intrinsics: `Motordriver/stereo_camera_calibration.json`** (five-term
+  pinhole, 26 captures / 78 tag observations; left RMS 0.185 px, right 0.244 px,
+  joint 0.611 px; fitted lateral D = 5.282 mm vs mechanical 5.178 mm). Workflow:
+  `docs/apriltag_camera_calibration.md`. **Do not silently overwrite it.**
+- `Motordriver/tag_sheet_calibration.json` now stores the *measured* 10.62 mm edge
+  (an earlier motion-derived 6.83 mm value was invalid and has been replaced). The
+  stage-motion `--calibrate` path is unreliable; prefer the measured tag size.
+- `stereo_probe_pose.py` detects tags (OpenCV aruco), recovers the sheet layout via
+  the reference tag's homography (id 2), solvePnP per camera with the calibrated
+  intrinsics, and returns per-camera transforms + the probe frame (mean view axis +
+  camera-center line). The scale from the 5.178 mm scope separation is
+  ill-conditioned at working distance — cross-check only.
+- Regression test: `analysis_scripts/test_stereo_apriltag_calibration.py`
+  (synthetic; last run recovered D = 5.138 mm vs expected 5.178 mm).
 
-Current measured state (changes whenever someone touches the setup — remeasure, do
-not trust these numbers): probe ⊥ sheet within ~3°, tip ~34.5 mm above the sheet,
-scope rolls ≈ −103° / +77° (relative twist ≈ 180°: one scope is mounted half a turn
-from the other; fine for stereo after rotating one image).
+Physical caveats: one scope protrudes ~0.5–1.5 mm from the tip face, the other
+~1–2 mm, and both can rotate/shift slightly when touched — per-session orientation
+estimation is mandatory (the twin does this at startup and updates at 5 Hz);
+never trust yesterday's rolls.
 
-Validated: reprojection ~0.3 px; the twin's rendered scope views re-detect the
-correct tag ids at the correct angles. **Known limitation:** the 120° lens's fisheye
-distortion is not calibrated; it biases the reconstructed camera separation (~2 mm
-vs true 5.18 mm). Rotations and motion-calibrated distances are good; for sub-mm
-absolute accuracy do a proper intrinsics calibration (small checkerboard at
-5–50 mm) — top of the wishlist.
+## Digital twin (five-panel)
 
-## Digital twin
+`digital_twin/twin_wasd_jog.py` mirrors the real controls (same keys, soft limits
+from `kcube_axes.json`, velocity scaling) and shows **five panels**: external twin,
+virtual left/right endoscope views (120° diag FOV), and the two *live* endoscope
+frames with detection overlays. Simulated axes only — it never commands motors.
 
-`digital_twin/twin_wasd_jog.py` mirrors the real controls (same keys, same soft
-limits from `kcube_axes.json`, same velocity scaling) and renders external +
-left/right endoscope views (correct 120° diagonal FOV) plus the needle out of the
-syringe channel (`--needle-extension-mm`, default 10; 0 hides it).
-
-- `--pose-live`: capture a stereo pair at startup, run the pose pipeline, initialize
-  the scene from it (probe pose, real tag layout as floor texture, per-scope camera
-  rolls). Writes `digital_twin/last_pose.json`. Nothing is hard-coded.
-- `--pose-json file`: same from a saved pose file.
+- Startup with `--pose-live` learns the session tag layout from the first stereo
+  pair (reference id 2 = origin) and keeps updating sheet/camera orientations at
+  5 Hz. Standard invocation (note the required tag size):
+  `python digital_twin\twin_wasd_jog.py --pose-live --tag-edge-mm 10.62
+  --anchor-ids 1,2,3 --reference-id 2 --reverse-cad-camera-order`
+- **`--reverse-cad-camera-order` is the currently correct camera↔bore mapping**;
+  the `C` key toggles it at runtime.
+- **Live needle-extension estimation**: projects the CAD needle axis into each
+  calibrated image to guide the Canny/Hough edge detector
+  (`Motordriver/needle_detector.py`), triangulates the detected tip, projects it
+  onto the CAD axis, and rebuilds the needle mesh. Overlays: cyan = projected CAD
+  axis, orange = detected edge, red = detected endpoint. Updates are rejected if
+  extension ∉ 0–40 mm, stereo-ray miss > 2.5 mm, or tip > 6 mm off-axis. Filtering:
+  single mm-domain blend (75 % new / 25 % previous); image-tip smoothing disabled.
+  **Pending user test:** deliberate retract→extend travel comparing raw vs rendered
+  values; do not add a scale factor unless the *raw* range is wrong.
 - `--test-render out.png`: headless single frame — use it to verify changes.
-- Texture orientation on the floor plane is verified: numpy row 0 → +y edge,
-  col 0 → −x edge. Don't "fix" it without re-running the render-and-detect check.
+- Floor-texture orientation is verified (numpy row 0 → +y edge, col 0 → −x edge);
+  don't "fix" it without re-running the render-and-detect check.
+- Detailed milestone narrative: `docs/fable_handover.md`.
 
 ## Standard commands
 
@@ -151,14 +160,14 @@ python Motordriver\stereo_apriltag_webcams.py --backend msmf --left-led min --ri
 :: LED level while an MSMF stream runs (or before, but it resets at stream start)
 python Motordriver\led_control.py --camera 0 --led min
 
-:: one-time metric-scale calibration (moves axis1 +2 mm and back)
-python Motordriver\stereo_probe_pose.py --calibrate --json pose.json
+:: pose snapshot (scale = measured 10.62 mm tag edge; avoid --calibrate, see above)
+python Motordriver\stereo_probe_pose.py --tag-edge-mm 10.62 --json pose.json
 
-:: pose snapshot using the saved calibration
-python Motordriver\stereo_probe_pose.py --json pose.json
+:: five-panel digital twin initialized from reality (recommended invocation)
+python digital_twin\twin_wasd_jog.py --pose-live --tag-edge-mm 10.62 --anchor-ids 1,2,3 --reference-id 2 --reverse-cad-camera-order
 
-:: digital twin initialized from reality
-python digital_twin\twin_wasd_jog.py --pose-live
+:: synthetic calibration regression test
+python analysis_scripts\test_stereo_apriltag_calibration.py
 ```
 
 ## Stereo-vision conventions
@@ -170,17 +179,21 @@ python digital_twin\twin_wasd_jog.py --pose-live
 
 ## Open work (rough priority order)
 
-1. **Lens calibration** (fisheye/pinhole intrinsics per scope) — unlocks accurate
-   absolute pose and lets the 5.18 mm separation act as a true cross-check.
-2. Ruler check of the tag edge (expected ≈ 2.61 mm) → validates/corrects f.
+1. **Needle-extension travel test** (needs the user at the bench): record raw vs
+   rendered extension at a known retracted and extended position; only then decide
+   about scale/offset corrections (raw wrong → Hough/stereo; rendered wrong →
+   filtering).
+2. Independent validation dataset (different tag sizes/positions) for the accepted
+   camera calibration.
 3. Supervisor's design questions: needle-axis offset Δy as a first-class
    optimization variable; syringe insertion length L in the multi-objective
    optimization (maximize usable reach with focus + both frustums + ΔZ tolerance).
-4. Needle↔floor collision guard in the twin (task-space limit mirroring the
-   soft-limit guard).
-5. Live pose streaming into the twin (currently snapshot-at-startup) and feeding the
-   pose into the needle→red-dot servoing pipeline.
-6. USB flakiness root cause (cables vs selective suspend).
+4. If the scopes keep shifting in their bores: fixed mechanical reference tags +
+   continuous camera-to-probe transform estimation instead of session-startup-only.
+5. Needle↔floor collision guard in the twin (task-space limit mirroring the
+   soft-limit guard); feed the live pose into the needle→red-dot servoing pipeline.
+6. USB flakiness root cause — selective suspend is now disabled (AC+DC, High
+   Performance plan), so cables/connectors are the prime suspects.
 
 ## Gotchas that cost hours — don't relearn them
 

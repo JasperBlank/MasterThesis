@@ -1,11 +1,6 @@
 {
-  "tag_edge_mm": 6.834613188349155,
-  "stage_axis": "axis1",
-  "stage_axis_dir_sheet": [
-    -0.2524956206495533,
-    -0.9662664967329799,
-    -0.05074464350225425
-  ],
-  "step_mm": 20.0,
-  "focal_px": 800.0
+  "tag_edge_mm": 10.62,
+  "source": "ruler measurement 2026-07-16, outside of black border; white gap between adjacent tags 2.14 mm",
+  "note": "Replaces an invalid motion-derived value (6.8346 mm). Motion calibration (--calibrate) is unreliable while the camera intrinsics debate is open; prefer measured tag size. See docs/fable_handover.md.",
+  "tag_gap_mm": 2.14
 }

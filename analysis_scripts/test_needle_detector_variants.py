@@ -20,9 +20,9 @@ from needle_detector import NeedleParams, detect_needle, draw_needle_overlay
 def variants(side: str):
     expected_angle = -124.0 if side == "left" else -73.0
     expected_line = (
-        (430.0, 392.0, 220.0, 328.0)
+        (650.0, 720.0, -220.0, -328.0)
         if side == "left"
-        else (310.0, 460.0, -80.0, 260.0)
+        else (230.0, 720.0, 80.0, -260.0)
     )
     common = dict(
         entry="bottom",
