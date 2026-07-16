@@ -72,6 +72,7 @@ def variants(side: str):
                 angle_tol_deg=18.0,
                 expected_line_px=expected_line,
                 line_distance_max_px=20.0,
+                cone_fit=False,
                 **common
             ),
         ),
@@ -84,11 +85,25 @@ def variants(side: str):
                 angle_tol_deg=18.0,
                 expected_line_px=expected_line,
                 line_distance_max_px=20.0,
+                cone_fit=False,
                 **common
             ),
         ),
         (
             "single-line40",
+            NeedleParams(
+                require_pair=False,
+                require_border=False,
+                expected_angle_deg=expected_angle,
+                angle_tol_deg=22.0,
+                expected_line_px=expected_line,
+                line_distance_max_px=40.0,
+                cone_fit=False,
+                **common
+            ),
+        ),
+        (
+            "cone-line40",
             NeedleParams(
                 require_pair=False,
                 require_border=False,

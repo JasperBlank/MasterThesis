@@ -89,6 +89,21 @@ class NeedleParams:
     border_margin_frac: float = 0.06      # "touching" tolerance, as a fraction of max(H, W)
     pair_fallback_single: bool = False    # if no pair is found, fall back to the single best line
 
+    # --- Cone fit (used with expected_line_px in single-line mode) ---
+    # Seen up close, the needle is a cone: its two side edges converge on the
+    # tip. Fitting both sides and intersecting them finds the apex even where
+    # Canny/Hough lose the thin tip, and removes the half-width bias of
+    # following a single side edge.
+    cone_fit: bool = True
+    cone_min_open_deg: float = 1.0        # sides closer to parallel than this: no stable apex
+    cone_max_open_deg: float = 50.0       # wider than this is not the needle taper
+    cone_apex_band_px: float = 25.0       # apex must lie this close to the guide line
+    cone_apex_overshoot_frac: float = 0.6 # apex may extend at most this fraction of the
+                                          # supported length beyond the last edge support
+    cone_side_gap_min_px: float = 3.0     # min offset gap that separates the two sides
+    clahe_clip: float = 2.0               # local-contrast boost before Canny (0 = off);
+                                          # recovers washed-out needle edges near the tip
+
 
 def _segment_angle_deg(x1: float, y1: float, x2: float, y2: float) -> float:
     return math.degrees(math.atan2(y2 - y1, x2 - x1))
@@ -135,6 +150,9 @@ def detect_needle(
         ox, oy = rx, ry
 
     gray = cv2.cvtColor(work, cv2.COLOR_BGR2GRAY)
+    if params.clahe_clip > 0:
+        clahe = cv2.createCLAHE(clipLimit=params.clahe_clip, tileGridSize=(8, 8))
+        gray = clahe.apply(gray)
     if params.blur_ksize > 1:
         k = params.blur_ksize | 1  # force odd
         gray = cv2.GaussianBlur(gray, (k, k), 0)
@@ -186,6 +204,14 @@ def detect_needle(
         pair = _best_needle_pair(segments, params, width, height, border_margin)
         if pair is not None:
             pts, n_support = pair
+
+    # Cone fit: with a projected CAD axis as guide, split the in-band segments
+    # into the needle's two converging side edges and intersect them.
+    if pts is None and params.cone_fit and params.expected_line_px is not None:
+        cone = _cone_tip_from_sides(segments, params)
+        if cone is not None:
+            tip, entry_pt, n_support = cone
+            return _make_detection(tip, entry_pt, n_support, params, prev)
 
     # Fallback: single dominant line touching a border (old behaviour).
     if pts is None:
@@ -262,6 +288,123 @@ def _best_needle_pair(segments: List[np.ndarray], params: NeedleParams,
     if best_pts is None:
         return None
     return best_pts, 2
+
+
+def _signed_offset_to_line(x: float, y: float,
+                           line: Tuple[float, float, float, float]) -> float:
+    """Signed perpendicular distance to the guide line (sign = which side)."""
+    x0, y0, dx, dy = line
+    norm = math.hypot(dx, dy) or 1.0
+    return ((x - x0) * (-dy) + (y - y0) * dx) / norm
+
+
+def _fit_line_through(pts: List[Tuple[float, float]]) -> Tuple[float, float, float, float]:
+    """Least-squares line fit; returns (x0, y0, ux, uy) with a unit direction."""
+    arr = np.array(pts, dtype=np.float32)
+    vx, vy, x0, y0 = cv2.fitLine(arr, cv2.DIST_L2, 0, 0.01, 0.01).flatten()
+    return float(x0), float(y0), float(vx), float(vy)
+
+
+def _intersect_lines(a: Tuple[float, float, float, float],
+                     b: Tuple[float, float, float, float]) -> Optional[Tuple[float, float]]:
+    ax, ay, aux, auy = a
+    bx, by, bux, buy = b
+    det = aux * buy - auy * bux
+    if abs(det) < 1e-9:
+        return None
+    t = ((bx - ax) * buy - (by - ay) * bux) / det
+    return ax + t * aux, ay + t * auy
+
+
+def _cone_tip_from_sides(segments: List[np.ndarray], params: NeedleParams):
+    """Tip = intersection of the needle's two side edges.
+
+    Splits the in-band segments by the side of the guide line their midpoint
+    falls on, fits one line per side, and intersects them. Returns
+    (tip, entry_point, n_support) or None when the cone is not credible.
+    """
+    guide = params.expected_line_px
+    gx, gy, gdx, gdy = guide
+    gnorm = math.hypot(gdx, gdy) or 1.0
+    gux, guy = gdx / gnorm, gdy / gnorm
+
+    # Split the segments into the two sides at the largest jump in their
+    # midpoint offsets. This works even when the guide line is not centered
+    # on the needle (its sign would then put everything on one side).
+    offsets = []
+    for seg in segments:
+        (x1, y1), (x2, y2) = _segment_endpoints(seg)
+        offsets.append(_signed_offset_to_line(0.5 * (x1 + x2), 0.5 * (y1 + y2), guide))
+    order = sorted(range(len(segments)), key=lambda i: offsets[i])
+    gaps = [offsets[order[i + 1]] - offsets[order[i]] for i in range(len(order) - 1)]
+    if not gaps:
+        return None
+    split_at = max(range(len(gaps)), key=lambda i: gaps[i])
+    if gaps[split_at] < params.cone_side_gap_min_px:
+        return None  # all segments hug one edge: no second side visible
+
+    sides: Tuple[List[Tuple[float, float]], List[Tuple[float, float]]] = ([], [])
+    counts = [0, 0]
+    for rank, seg_index in enumerate(order):
+        index = 0 if rank <= split_at else 1
+        (x1, y1), (x2, y2) = _segment_endpoints(segments[seg_index])
+        sides[index].extend([(x1, y1), (x2, y2)])
+        counts[index] += 1
+    if not sides[0] or not sides[1]:
+        return None
+
+    line_a = _fit_line_through(sides[0])
+    line_b = _fit_line_through(sides[1])
+
+    # Opening angle between the two side edges (undirected).
+    dot = abs(line_a[2] * line_b[2] + line_a[3] * line_b[3])
+    open_deg = math.degrees(math.acos(max(-1.0, min(1.0, dot))))
+    if not params.cone_min_open_deg <= open_deg <= params.cone_max_open_deg:
+        return None
+
+    apex = _intersect_lines(line_a, line_b)
+    if apex is None:
+        return None
+    if _distance_to_expected_line(apex[0], apex[1], guide) > params.cone_apex_band_px:
+        return None
+
+    # Progress of every support point along the guide direction; the apex must
+    # lie ahead of the support but not implausibly far beyond it.
+    all_pts = sides[0] + sides[1]
+    ts = [(px - gx) * gux + (py - gy) * guy for px, py in all_pts]
+    t_lo, t_hi = min(ts), max(ts)
+    t_apex = (apex[0] - gx) * gux + (apex[1] - gy) * guy
+    supported = max(t_hi - t_lo, 1e-6)
+    if t_apex < t_hi - 0.15 * supported:
+        return None  # sides intersect behind the edge support: not a tip
+    if t_apex > t_hi + params.cone_apex_overshoot_frac * supported:
+        return None  # extrapolating too far past the last visible edge
+
+    # Entry = least-advanced support point, projected onto the apex-direction
+    # centerline so the reported line is the cone's axis, not one side.
+    bisector_x, bisector_y = apex[0] - (gx + t_lo * gux), apex[1] - (gy + t_lo * guy)
+    bnorm = math.hypot(bisector_x, bisector_y) or 1.0
+    entry = (apex[0] - bisector_x / bnorm * (t_apex - t_lo),
+             apex[1] - bisector_y / bnorm * (t_apex - t_lo))
+    return apex, entry, counts[0] + counts[1]
+
+
+def _make_detection(tip: Tuple[float, float], entry_pt: Tuple[float, float],
+                    n_support: int, params: NeedleParams,
+                    prev: Optional[NeedleDetection]) -> NeedleDetection:
+    tip_x, tip_y = float(tip[0]), float(tip[1])
+    if prev is not None and 0.0 < params.ema_alpha < 1.0:
+        tip_x = params.ema_alpha * tip_x + (1.0 - params.ema_alpha) * prev.tip_x
+        tip_y = params.ema_alpha * tip_y + (1.0 - params.ema_alpha) * prev.tip_y
+    return NeedleDetection(
+        tip_x=tip_x,
+        tip_y=tip_y,
+        entry_x=float(entry_pt[0]),
+        entry_y=float(entry_pt[1]),
+        angle_deg=math.degrees(math.atan2(tip_y - entry_pt[1], tip_x - entry_pt[0])),
+        length_px=math.hypot(tip_x - entry_pt[0], tip_y - entry_pt[1]),
+        n_segments=n_support,
+    )
 
 
 def _best_single_line(segments: List[np.ndarray], params: NeedleParams,
