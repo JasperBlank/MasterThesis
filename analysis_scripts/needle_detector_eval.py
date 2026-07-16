@@ -16,7 +16,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-sys.path.insert(0, r"C:\Users\Labuser\OneDrive - University of Twente\Masterproject\Motordriver")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "Motordriver"))
 from needle_detector import NeedleParams, detect_needle
 
 BASE = Path(__file__).resolve().parents[1] / "Motordriver" / "needle_calib_data"

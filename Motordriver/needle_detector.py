@@ -116,6 +116,12 @@ class NeedleParams:
                                           # the needle's soft cast shadow at every LED level)
     corridor_min_width_px: float = 2.0
     corridor_max_width_px: float = 70.0
+    corridor_strong_ratio: float = 0.30   # tip must keep this fraction of the shaft's
+                                          # median contrast (relative floor; the absolute
+                                          # corridor_min_contrast floor still applies).
+                                          # 0.30 from a {0.45,0.3,0.2,0.1} sweep on the
+                                          # labeled calib set: fixes min-LED fade undershoot;
+                                          # below 0.3 the cast shadow creeps back in.
     corridor_gap_px: float = 24.0         # bridgeable break (specular highlights)
     corridor_min_run_px: float = 45.0     # minimum traced needle length to accept
     corridor_center_jump_px: float = 12.0 # max lateral jump of the band per step
@@ -446,7 +452,8 @@ def _corridor_trace(frame_bgr: np.ndarray, params: NeedleParams):
     chain_present = np.flatnonzero(present)
     half = chain_present[: max(1, len(chain_present) // 2)]
     ref_contrast = float(np.median(contrast[half]))
-    strong_floor = max(params.corridor_min_contrast, 0.45 * ref_contrast)
+    strong_floor = max(params.corridor_min_contrast,
+                       params.corridor_strong_ratio * ref_contrast)
     strong = chain_present[contrast[chain_present] >= strong_floor]
     if len(strong) == 0 or strong[-1] - start_t < params.corridor_min_run_px:
         return None

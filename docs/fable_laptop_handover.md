@@ -49,37 +49,38 @@ scene. We captured a **labeled calibration dataset** and rewrote the detector:
   pose jitter) and scores against the labels. Just run it — it finds the
   dataset by relative path.
 
-Current numbers (commit `7b7fc64`): median 12.6 px, p95 53 px, max 89.7 px,
-65.4 % within 15 px, 0 misses. Baseline (old Hough selection): median 42.6,
-p95 196, max 818. The user-visible flicker cause is fixed; two residual
-weaknesses remain (below).
+Current numbers (laptop, 2026-07-16, after the `corridor_strong_ratio` sweep):
+median 12.2 px, p95 28 px, max 89.1 px, 72.5 % within 15 px, 0 misses.
+Previous (commit `7b7fc64`, ratio hard-coded at 0.45): median 12.6, p95 53,
+max 89.7, 65.4 % within 15 px. Baseline (old Hough selection): median 42.6,
+p95 196, max 818.
 
-## In-flight experiment (continue here)
+## In-flight experiment — DONE (laptop, 2026-07-16)
 
-The worst remaining family is **min-LED light falloff**: toward the tip the
-needle fades gradually, and the "strong contrast" rule
-(`0.45 ×` shaft median) cuts the trace ~90 px early
-(see `extended_min_x0_y0_right`, `extended_min_x5_y0_right`).
+The min-LED light-falloff sweep described here was completed. The `0.45`
+strong-contrast ratio is now the `NeedleParams.corridor_strong_ratio` field,
+and the sweep over {0.45, 0.3, 0.2, 0.1} picked **0.30** by (max, then p95):
 
-I was mid-sweep of that ratio when the session ended. To continue: in
-`_corridor_trace` (needle_detector.py), the line
+| ratio | median | p95  | max  | <=15px |
+|-------|--------|------|------|--------|
+| 0.45  | 12.6   | 53.0 | 89.7 | 65.4 % |
+| 0.30  | 12.2   | 28.0 | 89.1 | 72.5 % |
+| 0.20  | 12.0   | 28.0 | 90.1 | 72.5 % |
+| 0.10  | 11.5   | 28.0 | 90.1 | 72.5 % |
 
-```python
-strong_floor = max(params.corridor_min_contrast, 0.45 * ref_contrast)
-```
+The hypothesis held: 0.30 fixes the min-LED undershoot family
+(`extended_min_x0_y0_right`, `extended_min_x5_y0_right` leave the worst list)
+because the absolute floor (`corridor_min_contrast` = 28) keeps rejecting the
+soft cast shadow. Below 0.30 the shadow creeps back in (at 0.20/0.10 the
+`retracted_min_x0_y0_right` +8 px perturbation degrades 40.8 → ~71 px), so
+0.30 is a real optimum, not just "lower is better". The sticker-rim watch case
+(`extended_min_x0_y5_left`, 67.6 px) is unchanged at every ratio — it is an
+independent residual, not a regression.
 
-Sweep the `0.45` over {0.45, 0.3, 0.2, 0.1} (expose it as a `NeedleParams`
-field, e.g. `corridor_strong_ratio`, rather than patching source) and run the
-harness for each. Hypothesis: lowering it fixes the min-LED undershoot without
-re-admitting shadows, because the **absolute** floor (`corridor_min_contrast`,
-now 28 — validated) already rejects the soft cast shadow (contrast ≈ 19–30).
-Watch that the shadow/tag/sticker cases don't regress: the harness prints the
-worst cases; the ones to keep an eye on are `*_x0_y5_left*` (sticker rim) and
-anything that previously ended in a tag.
-
-Definition of done: pick the best ratio by (max error, then p95), set it as the
-default, rerun the harness, update the numbers in this file and in the commit
-message, push.
+New lead found while re-running the harness: with ratio 0.30, **CLAHE off is
+now slightly better than on** (median 11.4 / p95 24.2 / 73.3 % vs
+12.2 / 28.0 / 72.5 %). CLAHE was validated against the old 0.45 rule; worth
+re-testing whether it still earns its place.
 
 ## Other laptop-friendly work (in priority order)
 
@@ -108,11 +109,10 @@ message, push.
 
 ## Repo/git notes for the laptop
 
-- Clone from GitHub; the lab PC pushes to `origin/main` and was clean at
-  `7b7fc64` when this was written. Pull before starting.
 - Commit style: descriptive body explaining the why, and
   `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`.
-- The lab PC's working copy lives inside OneDrive. If you push from the laptop,
-  remind the user to `git pull` on the lab PC before the next bench session so
-  the two working copies do not diverge (OneDrive does NOT sync the repo to the
-  laptop — only git connects them).
+- **Correction (2026-07-16):** OneDrive DOES sync the repo to the laptop,
+  `.git` included — the lab PC and the laptop share one working copy through
+  OneDrive. No clone/pull is needed to see each other's commits, but never run
+  git operations on both machines at the same time, and let OneDrive finish
+  syncing before starting a session, or `.git` can end up with sync conflicts.
