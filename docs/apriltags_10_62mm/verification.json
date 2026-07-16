@@ -1,0 +1,39 @@
+{
+  "family": "36h11",
+  "ids": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "outer_black_border_mm": 10.62,
+  "pixels_per_mm": 100,
+  "png_dpi": 2540.0,
+  "marker_pixels": 1062,
+  "individual_quiet_zone_pixels_per_side": 266,
+  "individual_png_detected_ids": {
+    "1": [
+      1
+    ],
+    "2": [
+      2
+    ],
+    "3": [
+      3
+    ],
+    "4": [
+      4
+    ],
+    "5": [
+      5
+    ]
+  },
+  "sheet_png_detected_ids": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ]
+}

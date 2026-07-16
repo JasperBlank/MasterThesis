@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>9x9 Go Hotseat</title>
+<style>
+  body { font-family: sans-serif; background: #ddd; display: flex; flex-direction: column; align-items: center; margin: 20px; }
+  #info { margin: 10px; font-size: 18px; }
+  canvas { background: #dcb35c; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  button { margin: 10px; padding: 6px 14px; font-size: 14px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="info">Turn: <span id="turn">Black</span></div>
+<canvas id="board" width="540" height="540"></canvas>
+<div>
+  <button onclick="reset()">Reset</button>
+  <button onclick="score()">Score</button>
+  <label style="margin-left:10px;">Komi: <input id="komi" type="number" value="5.5" step="0.5" style="width:60px;"></label>
+</div>
+<div id="result" style="margin-top:10px; font-size:16px;"></div>
+<script>
+const SIZE = 9;
+const CELL = 60;
+const OFFSET = 30;
+const canvas = document.getElementById('board');
+const ctx = canvas.getContext('2d');
+let board = Array.from({length: SIZE}, () => Array(SIZE).fill(0));
+let turn = 1; // 1 black, 2 white
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#dcb35c';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < SIZE; i++) {
+    ctx.beginPath();
+    ctx.moveTo(OFFSET, OFFSET + i * CELL);
+    ctx.lineTo(OFFSET + (SIZE-1) * CELL, OFFSET + i * CELL);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(OFFSET + i * CELL, OFFSET);
+    ctx.lineTo(OFFSET + i * CELL, OFFSET + (SIZE-1) * CELL);
+    ctx.stroke();
+  }
+  // star points
+  const stars = [[2,2],[2,6],[6,2],[6,6],[4,4]];
+  ctx.fillStyle = '#000';
+  for (const [x,y] of stars) {
+    ctx.beginPath();
+    ctx.arc(OFFSET + x*CELL, OFFSET + y*CELL, 4, 0, Math.PI*2);
+    ctx.fill();
+  }
+  // stones
+  for (let x = 0; x < SIZE; x++) {
+    for (let y = 0; y < SIZE; y++) {
+      if (board[x][y]) {
+        const cx = OFFSET + x*CELL;
+        const cy = OFFSET + y*CELL;
+        const grad = ctx.createRadialGradient(cx-6, cy-6, 2, cx, cy, CELL/2 - 2);
+        if (board[x][y] === 1) {
+          grad.addColorStop(0, '#555');
+          grad.addColorStop(1, '#000');
+        } else {
+          grad.addColorStop(0, '#fff');
+          grad.addColorStop(1, '#bbb');
+        }
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, CELL/2 - 3, 0, Math.PI*2);
+        ctx.fill();
+      }
+    }
+  }
+}
+
+function getPos(e) {
+  const r = canvas.getBoundingClientRect();
+  const px = e.clientX - r.left;
+  const py = e.clientY - r.top;
+  const x = Math.round((px - OFFSET) / CELL);
+  const y = Math.round((py - OFFSET) / CELL);
+  if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) return null;
+  return [x, y];
+}
+
+function updateTurnDisplay() {
+  document.getElementById('turn').textContent = turn === 1 ? 'Black' : 'White';
+}
+
+canvas.addEventListener('click', e => {
+  const p = getPos(e);
+  if (!p) return;
+  const [x, y] = p;
+  if (board[x][y] !== 0) return;
+  board[x][y] = turn;
+  turn = turn === 1 ? 2 : 1;
+  updateTurnDisplay();
+  draw();
+});
+
+canvas.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const p = getPos(e);
+  if (!p) return;
+  const [x, y] = p;
+  if (board[x][y] !== 0) {
+    board[x][y] = 0;
+    draw();
+  }
+});
+
+function score() {
+  // Area scoring: stones on board + territory (empty regions touching only one color)
+  const visited = Array.from({length: SIZE}, () => Array(SIZE).fill(false));
+  let blackStones = 0, whiteStones = 0;
+  let blackTerr = 0, whiteTerr = 0, neutral = 0;
+  for (let x = 0; x < SIZE; x++) for (let y = 0; y < SIZE; y++) {
+    if (board[x][y] === 1) blackStones++;
+    else if (board[x][y] === 2) whiteStones++;
+  }
+  for (let x = 0; x < SIZE; x++) for (let y = 0; y < SIZE; y++) {
+    if (board[x][y] !== 0 || visited[x][y]) continue;
+    const queue = [[x,y]];
+    const region = [];
+    let touchBlack = false, touchWhite = false;
+    visited[x][y] = true;
+    while (queue.length) {
+      const [cx, cy] = queue.shift();
+      region.push([cx, cy]);
+      for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+        const nx = cx+dx, ny = cy+dy;
+        if (nx<0||ny<0||nx>=SIZE||ny>=SIZE) continue;
+        if (board[nx][ny] === 1) touchBlack = true;
+        else if (board[nx][ny] === 2) touchWhite = true;
+        else if (!visited[nx][ny]) { visited[nx][ny] = true; queue.push([nx,ny]); }
+      }
+    }
+    if (touchBlack && !touchWhite) blackTerr += region.length;
+    else if (touchWhite && !touchBlack) whiteTerr += region.length;
+    else neutral += region.length;
+  }
+  const komi = parseFloat(document.getElementById('komi').value) || 0;
+  const blackTotal = blackStones + blackTerr;
+  const whiteTotal = whiteStones + whiteTerr + komi;
+  const diff = blackTotal - whiteTotal;
+  const winner = diff > 0 ? `Black wins by ${diff}` : diff < 0 ? `White wins by ${-diff}` : 'Tie';
+  document.getElementById('result').innerHTML =
+    `Black: ${blackStones} stones + ${blackTerr} territory = <b>${blackTotal}</b><br>` +
+    `White: ${whiteStones} stones + ${whiteTerr} territory + ${komi} komi = <b>${whiteTotal}</b><br>` +
+    `Neutral (dame): ${neutral}<br><b>${winner}</b>`;
+}
+
+function reset() {
+  board = Array.from({length: SIZE}, () => Array(SIZE).fill(0));
+  turn = 1;
+  updateTurnDisplay();
+  draw();
+}
+
+draw();
+</script>
+</body>
+</html>

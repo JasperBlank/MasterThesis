@@ -1,0 +1,13 @@
+{
+  "blur_kernel_px": 15,
+  "distance_over_tag_size": 33.333333,
+  "projected_tag_side_px": 31.500000315,
+  "width_px": 960,
+  "height_px": 720,
+  "fully_visible_count": 36,
+  "detected_count": 0,
+  "readability_rate_among_fully_visible": 0.0,
+  "source_image": "ratio_s0p5_r33p333.png",
+  "raw_example": "C:\\Users\\jjbla\\OneDrive\\Desktop\\Masterproject\\aprilgrid_blender\\degradation_matrix\\ratio_scale\\blur_examples\\blur_15px_max_zoom_out_raw.png",
+  "annotated_example": "C:\\Users\\jjbla\\OneDrive\\Desktop\\Masterproject\\aprilgrid_blender\\degradation_matrix\\ratio_scale\\blur_examples\\blur_15px_max_zoom_out_annotated.png"
+}

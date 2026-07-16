@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+
+# Tool/session state
+.claude/
+.agents/
+cache/
+
+# Office/OneDrive temp files
+~$*
+*.tmp
+
+# Generated at runtime
+digital_twin/last_pose.json
+
+# Large media (kept in OneDrive, not in git)
+*.mp4
+
+# Scratch folders
+New folder/
+New folder (2)/

@@ -1,0 +1,106 @@
+{
+  "first_any_detection_px": 12.304687807617196,
+  "first_at_least_half_tags_px": 21.875,
+  "first_all_visible_36_tags_px": 32.81250082031252,
+  "bins": [
+    {
+      "tag_side_px_min": 0,
+      "tag_side_px_max": 10,
+      "samples": 52,
+      "mean_detected_count": 0.0,
+      "min_detected_count": 0,
+      "max_detected_count": 0,
+      "mean_detection_rate": 0.0
+    },
+    {
+      "tag_side_px_min": 10,
+      "tag_side_px_max": 15,
+      "samples": 36,
+      "mean_detected_count": 0.1111111111111111,
+      "min_detected_count": 0,
+      "max_detected_count": 1,
+      "mean_detection_rate": 0.0030864197530864196
+    },
+    {
+      "tag_side_px_min": 15,
+      "tag_side_px_max": 20,
+      "samples": 20,
+      "mean_detected_count": 7.6,
+      "min_detected_count": 1,
+      "max_detected_count": 16,
+      "mean_detection_rate": 0.2111111111111111
+    },
+    {
+      "tag_side_px_min": 20,
+      "tag_side_px_max": 25,
+      "samples": 20,
+      "mean_detected_count": 16.0,
+      "min_detected_count": 8,
+      "max_detected_count": 20,
+      "mean_detection_rate": 0.4444444444444444
+    },
+    {
+      "tag_side_px_min": 25,
+      "tag_side_px_max": 30,
+      "samples": 12,
+      "mean_detected_count": 19.0,
+      "min_detected_count": 6,
+      "max_detected_count": 26,
+      "mean_detection_rate": 0.5277777777777778
+    },
+    {
+      "tag_side_px_min": 30,
+      "tag_side_px_max": 35,
+      "samples": 12,
+      "mean_detected_count": 28.0,
+      "min_detected_count": 24,
+      "max_detected_count": 36,
+      "mean_detection_rate": 0.7777777777777778
+    },
+    {
+      "tag_side_px_min": 35,
+      "tag_side_px_max": 45,
+      "samples": 12,
+      "mean_detected_count": 22.666666666666668,
+      "min_detected_count": 8,
+      "max_detected_count": 36,
+      "mean_detection_rate": 0.6296296296296297
+    },
+    {
+      "tag_side_px_min": 45,
+      "tag_side_px_max": 60,
+      "samples": 8,
+      "mean_detected_count": 22.0,
+      "min_detected_count": 8,
+      "max_detected_count": 36,
+      "mean_detection_rate": 0.6111111111111112
+    },
+    {
+      "tag_side_px_min": 60,
+      "tag_side_px_max": 80,
+      "samples": 12,
+      "mean_detected_count": 36.0,
+      "min_detected_count": 36,
+      "max_detected_count": 36,
+      "mean_detection_rate": 1.0
+    },
+    {
+      "tag_side_px_min": 80,
+      "tag_side_px_max": 120,
+      "samples": 4,
+      "mean_detected_count": 24.0,
+      "min_detected_count": 24,
+      "max_detected_count": 24,
+      "mean_detection_rate": 0.6666666666666666
+    },
+    {
+      "tag_side_px_min": 120,
+      "tag_side_px_max": 200,
+      "samples": 4,
+      "mean_detected_count": 8.0,
+      "min_detected_count": 8,
+      "max_detected_count": 8,
+      "mean_detection_rate": 0.2222222222222222
+    }
+  ]
+}

@@ -1,0 +1,377 @@
+{
+  "baseline": {
+    "cases": 1,
+    "min_detected_count": 36,
+    "max_detected_count": 36,
+    "mean_detected_count": 36.0,
+    "min_detection_rate": 1.0,
+    "mean_detection_rate": 1.0,
+    "levels": {
+      "baseline": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      }
+    }
+  },
+  "distance": {
+    "cases": 7,
+    "min_detected_count": 8,
+    "max_detected_count": 36,
+    "mean_detected_count": 28.571428571428573,
+    "min_detection_rate": 0.2222222222222222,
+    "mean_detection_rate": 0.7936507936507936,
+    "levels": {
+      "0.45m": {
+        "detected_count": 8,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.2222222222222222
+      },
+      "0.60m": {
+        "detected_count": 24,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.6666666666666666
+      },
+      "0.80m": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "1.00m": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "1.25m": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "1.60m": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "2.00m": {
+        "detected_count": 24,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.6666666666666666
+      }
+    }
+  },
+  "viewing_angle": {
+    "cases": 6,
+    "min_detected_count": 6,
+    "max_detected_count": 36,
+    "mean_detected_count": 28.833333333333332,
+    "min_detection_rate": 0.16666666666666666,
+    "mean_detection_rate": 0.8009259259259259,
+    "levels": {
+      "0deg": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "15deg": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "30deg": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "45deg": {
+        "detected_count": 35,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.9722222222222222
+      },
+      "60deg": {
+        "detected_count": 24,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.6666666666666666
+      },
+      "70deg": {
+        "detected_count": 6,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.16666666666666666
+      }
+    }
+  },
+  "partial_occlusion": {
+    "cases": 6,
+    "min_detected_count": 12,
+    "max_detected_count": 36,
+    "mean_detected_count": 26.0,
+    "min_detection_rate": 0.3333333333333333,
+    "mean_detection_rate": 0.7222222222222222,
+    "levels": {
+      "0pct": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "10pct": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "20pct": {
+        "detected_count": 30,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.8333333333333334
+      },
+      "35pct": {
+        "detected_count": 24,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.6666666666666666
+      },
+      "50pct": {
+        "detected_count": 18,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.5
+      },
+      "65pct": {
+        "detected_count": 12,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.3333333333333333
+      }
+    }
+  },
+  "visible_tags": {
+    "cases": 7,
+    "min_detected_count": 1,
+    "max_detected_count": 36,
+    "mean_detected_count": 14.285714285714286,
+    "min_detection_rate": 1.0,
+    "mean_detection_rate": 1.0,
+    "levels": {
+      "1": {
+        "detected_count": 1,
+        "expected_visible_tags": 1,
+        "detection_rate": 1.0
+      },
+      "3": {
+        "detected_count": 3,
+        "expected_visible_tags": 3,
+        "detection_rate": 1.0
+      },
+      "6": {
+        "detected_count": 6,
+        "expected_visible_tags": 6,
+        "detection_rate": 1.0
+      },
+      "12": {
+        "detected_count": 12,
+        "expected_visible_tags": 12,
+        "detection_rate": 1.0
+      },
+      "18": {
+        "detected_count": 18,
+        "expected_visible_tags": 18,
+        "detection_rate": 1.0
+      },
+      "24": {
+        "detected_count": 24,
+        "expected_visible_tags": 24,
+        "detection_rate": 1.0
+      },
+      "36": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      }
+    }
+  },
+  "tag_size": {
+    "cases": 4,
+    "min_detected_count": 36,
+    "max_detected_count": 36,
+    "mean_detected_count": 36.0,
+    "min_detection_rate": 1.0,
+    "mean_detection_rate": 1.0,
+    "levels": {
+      "30mm": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "45mm": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "60mm": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "75mm": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      }
+    }
+  },
+  "spacing": {
+    "cases": 4,
+    "min_detected_count": 0,
+    "max_detected_count": 36,
+    "mean_detected_count": 27.0,
+    "min_detection_rate": 0.0,
+    "mean_detection_rate": 0.75,
+    "levels": {
+      "0mm": {
+        "detected_count": 0,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.0
+      },
+      "10mm": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "25mm": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "40mm": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      }
+    }
+  },
+  "resolution": {
+    "cases": 6,
+    "min_detected_count": 0,
+    "max_detected_count": 36,
+    "mean_detected_count": 13.666666666666666,
+    "min_detection_rate": 0.0,
+    "mean_detection_rate": 0.3796296296296296,
+    "levels": {
+      "100px": {
+        "detected_count": 0,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.0
+      },
+      "150px": {
+        "detected_count": 0,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.0
+      },
+      "200px": {
+        "detected_count": 0,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.0
+      },
+      "300px": {
+        "detected_count": 20,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.5555555555555556
+      },
+      "400px": {
+        "detected_count": 26,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.7222222222222222
+      },
+      "960px": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      }
+    }
+  },
+  "motion_blur": {
+    "cases": 7,
+    "min_detected_count": 0,
+    "max_detected_count": 36,
+    "mean_detected_count": 20.0,
+    "min_detection_rate": 0.0,
+    "mean_detection_rate": 0.5555555555555556,
+    "levels": {
+      "0px": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "3px": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "7px": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "11px": {
+        "detected_count": 32,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.8888888888888888
+      },
+      "15px": {
+        "detected_count": 0,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.0
+      },
+      "21px": {
+        "detected_count": 0,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.0
+      },
+      "31px": {
+        "detected_count": 0,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.0
+      }
+    }
+  },
+  "lighting": {
+    "cases": 7,
+    "min_detected_count": 30,
+    "max_detected_count": 36,
+    "mean_detected_count": 35.142857142857146,
+    "min_detection_rate": 0.8333333333333334,
+    "mean_detection_rate": 0.9761904761904762,
+    "levels": {
+      "0.20x": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "0.35x": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "0.50x": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "0.75x": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "1.00x": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "1.50x": {
+        "detected_count": 36,
+        "expected_visible_tags": 36,
+        "detection_rate": 1.0
+      },
+      "2.00x": {
+        "detected_count": 30,
+        "expected_visible_tags": 36,
+        "detection_rate": 0.8333333333333334
+      }
+    }
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "blur_kernels_px": [
+    0,
+    3,
+    7,
+    11,
+    15
+  ],
+  "thresholds": {
+    "0": {
+      "first_any_detection_px": 12.304687807617196,
+      "first_at_least_half_tags_px": 21.875,
+      "first_all_visible_36_tags_px": 32.81250082031252,
+      "max_detected_count": 36,
+      "mean_detected_count": 10.666666666666666
+    },
+    "3": {
+      "first_any_detection_px": 16.406249794921877,
+      "first_at_least_half_tags_px": 29.166666666666668,
+      "first_all_visible_36_tags_px": 39.374999507812504,
+      "max_detected_count": 36,
+      "mean_detected_count": 9.0625
+    },
+    "7": {
+      "first_any_detection_px": 39.374999507812504,
+      "first_at_least_half_tags_px": 43.75,
+      "first_all_visible_36_tags_px": 70.0,
+      "max_detected_count": 36,
+      "mean_detected_count": 4.354166666666667
+    },
+    "11": {
+      "first_any_detection_px": 58.333333333333336,
+      "first_at_least_half_tags_px": 62.999998740000024,
+      "first_all_visible_36_tags_px": null,
+      "max_detected_count": 32,
+      "mean_detected_count": 2.4583333333333335
+    },
+    "15": {
+      "first_any_detection_px": 78.75000196875006,
+      "first_at_least_half_tags_px": 105.0,
+      "first_all_visible_36_tags_px": null,
+      "max_detected_count": 23,
+      "mean_detected_count": 0.9375
+    }
+  },
+  "bins_tag_side_px": [
+    {
+      "min": 0,
+      "max": 10
+    },
+    {
+      "min": 10,
+      "max": 15
+    },
+    {
+      "min": 15,
+      "max": 20
+    },
+    {
+      "min": 20,
+      "max": 25
+    },
+    {
+      "min": 25,
+      "max": 30
+    },
+    {
+      "min": 30,
+      "max": 35
+    },
+    {
+      "min": 35,
+      "max": 45
+    },
+    {
+      "min": 45,
+      "max": 60
+    },
+    {
+      "min": 60,
+      "max": 80
+    },
+    {
+      "min": 80,
+      "max": 120
+    },
+    {
+      "min": 120,
+      "max": 200
+    }
+  ],
+  "mean_detected_count_by_blur_and_bin": [
+    [
+      0.0,
+      0.1111111111111111,
+      7.6,
+      16.0,
+      19.0,
+      28.0,
+      22.666666666666668,
+      22.0,
+      36.0,
+      24.0,
+      8.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.6,
+      10.2,
+      14.0,
+      27.333333333333332,
+      22.666666666666668,
+      22.0,
+      36.0,
+      24.0,
+      8.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      11.666666666666666,
+      18.0,
+      35.333333333333336,
+      24.0,
+      8.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      1.5,
+      27.666666666666668,
+      24.0,
+      8.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      4.666666666666667,
+      23.0,
+      8.0
+    ]
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "aprilgrid_image": "C:\\Users\\jjbla\\Downloads\\april_grid.png",
+  "board_size_m": 0.6096,
+  "resolution_x": 960,
+  "resolution_y": 720,
+  "camera_lens_mm": 35.0,
+  "camera_sensor_width_mm": 32.0,
+  "random_seed": 42,
+  "intrinsics": {
+    "fx_px": 1050.0,
+    "fy_px": 1050.0,
+    "cx_px": 480.0,
+    "cy_px": 360.0
+  },
+  "pose_count": 30,
+  "coordinate_note": "Board lies on Blender XY plane at Z=0; camera looks along its local -Z axis."
+}

@@ -1,0 +1,193 @@
+{
+  "coverage_by_distance_over_tag_size": [
+    {
+      "distance_over_tag_size": 7.5,
+      "fully_visible_count": 8,
+      "partially_visible_count": 24
+    },
+    {
+      "distance_over_tag_size": 10.0,
+      "fully_visible_count": 24,
+      "partially_visible_count": 36
+    },
+    {
+      "distance_over_tag_size": 13.333333,
+      "fully_visible_count": 36,
+      "partially_visible_count": 36
+    },
+    {
+      "distance_over_tag_size": 15.0,
+      "fully_visible_count": 36,
+      "partially_visible_count": 36
+    },
+    {
+      "distance_over_tag_size": 16.666667,
+      "fully_visible_count": 36,
+      "partially_visible_count": 36
+    },
+    {
+      "distance_over_tag_size": 20.833333,
+      "fully_visible_count": 36,
+      "partially_visible_count": 36
+    },
+    {
+      "distance_over_tag_size": 26.666667,
+      "fully_visible_count": 36,
+      "partially_visible_count": 36
+    },
+    {
+      "distance_over_tag_size": 33.333333,
+      "fully_visible_count": 36,
+      "partially_visible_count": 36
+    }
+  ],
+  "readability_thresholds_px": {
+    "0": {
+      "first_readability_0.25_px": 15.750000252000005,
+      "first_readability_0.50_px": 21.875,
+      "first_readability_0.75_px": 21.875,
+      "first_readability_1.00_px": 21.875
+    },
+    "3": {
+      "first_readability_0.25_px": 21.875,
+      "first_readability_0.50_px": 21.875,
+      "first_readability_0.75_px": 21.875,
+      "first_readability_1.00_px": 39.374999507812504
+    },
+    "7": {
+      "first_readability_0.25_px": 39.374999507812504,
+      "first_readability_0.50_px": 43.75,
+      "first_readability_0.75_px": 43.75,
+      "first_readability_1.00_px": 58.333333333333336
+    },
+    "11": {
+      "first_readability_0.25_px": 58.333333333333336,
+      "first_readability_0.50_px": 62.999998740000024,
+      "first_readability_0.75_px": 70.0,
+      "first_readability_1.00_px": 105.0
+    },
+    "15": {
+      "first_readability_0.25_px": 78.75000196875006,
+      "first_readability_0.50_px": 105.0,
+      "first_readability_0.75_px": 105.0,
+      "first_readability_1.00_px": 140.0
+    }
+  },
+  "pixel_bins": [
+    {
+      "min": 0,
+      "max": 10
+    },
+    {
+      "min": 10,
+      "max": 15
+    },
+    {
+      "min": 15,
+      "max": 20
+    },
+    {
+      "min": 20,
+      "max": 25
+    },
+    {
+      "min": 25,
+      "max": 30
+    },
+    {
+      "min": 30,
+      "max": 35
+    },
+    {
+      "min": 35,
+      "max": 45
+    },
+    {
+      "min": 45,
+      "max": 60
+    },
+    {
+      "min": 60,
+      "max": 80
+    },
+    {
+      "min": 80,
+      "max": 120
+    },
+    {
+      "min": 120,
+      "max": 200
+    }
+  ],
+  "mean_readability_by_blur_and_pixel_bin": [
+    [
+      0.0,
+      0.0030864197530864196,
+      0.21388888888888893,
+      0.6555555555555556,
+      0.7222222222222222,
+      0.8888888888888888,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.04444444444444444,
+      0.4444444444444445,
+      0.5509259259259259,
+      0.8657407407407408,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.6064814814814815,
+      0.8888888888888888,
+      0.9814814814814815,
+      1.0,
+      1.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.1875,
+      0.7685185185185186,
+      1.0,
+      1.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.12962962962962962,
+      0.9583333333333334,
+      1.0
+    ]
+  ],
+  "definition": {
+    "coverage": "complete AprilTag markers with all four tag corners inside the image frame",
+    "readability": "detected tags divided by complete visible tags"
+  }
+}
