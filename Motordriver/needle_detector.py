@@ -104,6 +104,23 @@ class NeedleParams:
     clahe_clip: float = 2.0               # local-contrast boost before Canny (0 = off);
                                           # recovers washed-out needle edges near the tip
 
+    # --- Corridor trace (primary method when expected_line_px is set) ---
+    # Rectify a band around the guide line and follow the needle as a
+    # continuous dark, low-saturation ridge from the entry side; the tip is
+    # where the ridge ends. Region evidence instead of sparse Hough lines.
+    corridor_trace: bool = True
+    corridor_halfwidth_px: int = 45       # half-width of the rectified corridor
+    corridor_length_px: int = 420         # how far along the guide to look
+    corridor_min_contrast: float = 28.0   # band must be this much darker than local bg
+                                          # (28 validated on the labeled calib set: rejects
+                                          # the needle's soft cast shadow at every LED level)
+    corridor_min_width_px: float = 2.0
+    corridor_max_width_px: float = 70.0
+    corridor_gap_px: float = 24.0         # bridgeable break (specular highlights)
+    corridor_min_run_px: float = 45.0     # minimum traced needle length to accept
+    corridor_center_jump_px: float = 12.0 # max lateral jump of the band per step
+    corridor_sat_max: int = 110           # HSV saturation above this = not metal
+
 
 def _segment_angle_deg(x1: float, y1: float, x2: float, y2: float) -> float:
     return math.degrees(math.atan2(y2 - y1, x2 - x1))
@@ -138,6 +155,15 @@ def detect_needle(
     ``prev`` (the last good detection) is used only for EMA smoothing of the tip.
     """
     height, width = frame_bgr.shape[:2]
+
+    # Primary method with a guide line: trace the needle as a continuous dark
+    # band inside a rectified corridor. Falls through to the Hough pipeline
+    # when the trace finds nothing credible.
+    if params.corridor_trace and params.expected_line_px is not None:
+        traced = _corridor_trace(frame_bgr, params)
+        if traced is not None:
+            tip, entry_pt, n_support = traced
+            return _make_detection(tip, entry_pt, n_support, params, prev)
 
     # Optional ROI restriction (offset added back so coordinates stay frame-global).
     ox, oy = 0, 0
@@ -288,6 +314,159 @@ def _best_needle_pair(segments: List[np.ndarray], params: NeedleParams,
     if best_pts is None:
         return None
     return best_pts, 2
+
+
+def _corridor_trace(frame_bgr: np.ndarray, params: NeedleParams):
+    """Trace the needle as a continuous dark, low-saturation band along the guide.
+
+    The corridor around ``expected_line_px`` is rectified so the guide runs
+    left-to-right; each column's perpendicular intensity profile is classified
+    as needle (a dark band of plausible width) or background. The needle is the
+    band that starts on the entry side and runs continuously (small gaps
+    bridged); the tip is where it ends. Returns (tip, entry, n_columns) in
+    frame coordinates, or None.
+    """
+    gx, gy, gdx, gdy = params.expected_line_px
+    norm = math.hypot(gdx, gdy)
+    if norm < 1e-9:
+        return None
+    ux, uy = gdx / norm, gdy / norm
+
+    hw = int(params.corridor_halfwidth_px)
+    length = int(params.corridor_length_px)
+
+    # Affine map: corridor pixel (col t, row s) <- frame point
+    # (g + t*u + (s-hw)*perp). warpAffine wants the inverse (frame -> corridor).
+    px, py = -uy, ux
+    m = np.array(
+        [
+            [ux, uy, -(gx * ux + gy * uy)],
+            [px, py, -(gx * px + gy * py) + hw],
+        ],
+        dtype=np.float64,
+    )
+    hsv = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2HSV)
+    gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
+    # Outside-image samples read as bright background so they terminate bands.
+    corr_gray = cv2.warpAffine(
+        gray, m, (length, 2 * hw + 1),
+        flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=255,
+    ).astype(np.float32)
+    corr_sat = cv2.warpAffine(
+        hsv[:, :, 1], m, (length, 2 * hw + 1),
+        flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0,
+    ).astype(np.float32)
+
+    # Saturated pixels (the red target, colored clutter) count as background.
+    # Dilate the mask so the sticker's dark, desaturated rim goes with it.
+    sat_mask = (corr_sat > params.corridor_sat_max).astype(np.uint8)
+    sat_mask = cv2.dilate(sat_mask, np.ones((9, 9), np.uint8))
+    corr_gray[sat_mask > 0] = 255.0
+
+    rows = corr_gray.shape[0]
+    # Local background per column: bright percentile of the profile. The card
+    # is white, so this adapts to LED level and vignetting.
+    background = np.percentile(corr_gray, 85, axis=0)
+    threshold = background - params.corridor_min_contrast
+
+    # Dark runs per column (width >= min; no upper bound here - near the shaft
+    # the needle merges with the dark vignette and gets arbitrarily wide).
+    runs_per_col: List[List[Tuple[int, int]]] = []
+    for t in range(length):
+        dark = corr_gray[:, t] <= threshold[t]
+        col_runs: List[Tuple[int, int]] = []
+        if dark.any():
+            changes = np.flatnonzero(np.diff(dark.astype(np.int8)))
+            starts = np.concatenate(([0], changes + 1))
+            ends = np.concatenate((changes, [rows - 1]))
+            for s, e in zip(starts, ends):
+                if dark[s] and e - s + 1 >= params.corridor_min_width_px:
+                    col_runs.append((int(s), int(e)))
+        runs_per_col.append(col_runs)
+
+    # Find the start: the first column (in the entry half) with a run near the
+    # corridor center, where the guide crosses the shaft.
+    start_t = None
+    start_run = None
+    for t in range(int(0.5 * length)):
+        for s, e in runs_per_col[t]:
+            if s - hw * 0.7 <= hw <= e + hw * 0.7:
+                start_t, start_run = t, (s, e)
+                break
+        if start_t is not None:
+            break
+    if start_t is None:
+        return None
+
+    # Trace with lateral continuity: each accepted column's run must overlap
+    # the previous run's row interval (the needle cannot jump sideways). After
+    # a multi-column break, the resuming run must also be narrow - this stops
+    # the trace from continuing into a tag whose dark pattern enters the
+    # corridor beyond the tip.
+    jump = params.corridor_center_jump_px
+    centers = np.full(length, np.nan, dtype=np.float32)
+    contrast = np.zeros(length, dtype=np.float32)
+    present = np.zeros(length, dtype=bool)
+    row_index = np.arange(rows, dtype=np.float32)
+
+    def accept(t, run):
+        s, e = run
+        present[t] = True
+        seg = slice(s, e + 1)
+        contrast[t] = float(background[t] - corr_gray[seg, t].min())
+        if e - s + 1 <= params.corridor_max_width_px:
+            weights = np.clip(threshold[t] - corr_gray[seg, t], 0.1, None)
+            centers[t] = float(np.average(row_index[seg], weights=weights))
+
+    accept(start_t, start_run)
+    prev_run = start_run
+    last_good = start_t
+    for t in range(start_t + 1, length):
+        lo, hi = prev_run[0] - jump, prev_run[1] + jump
+        candidates = [r for r in runs_per_col[t] if r[1] >= lo and r[0] <= hi]
+        if (t - last_good) > 2:
+            candidates = [
+                r for r in candidates
+                if r[1] - r[0] + 1 <= params.corridor_max_width_px
+            ]
+        if candidates:
+            best = max(candidates, key=lambda r: min(r[1], hi) - max(r[0], lo))
+            accept(t, best)
+            prev_run = best
+            last_good = t
+        elif t - last_good > params.corridor_gap_px:
+            break
+    end_t = last_good
+    if end_t - start_t < params.corridor_min_run_px:
+        return None
+
+    # The tip is the last traced column that is still clearly the needle:
+    # contrast comparable to the needle's own shaft (rejects the soft cast
+    # shadow that can extend the dark band past the tip).
+    chain_present = np.flatnonzero(present)
+    half = chain_present[: max(1, len(chain_present) // 2)]
+    ref_contrast = float(np.median(contrast[half]))
+    strong_floor = max(params.corridor_min_contrast, 0.45 * ref_contrast)
+    strong = chain_present[contrast[chain_present] >= strong_floor]
+    if len(strong) == 0 or strong[-1] - start_t < params.corridor_min_run_px:
+        return None
+    tip_t = int(strong[-1])
+
+    # Center for the tip column: use the nearest chain column with a valid
+    # (narrow-band) center at or before the tip.
+    center_t = tip_t
+    while center_t > start_t and np.isnan(centers[center_t]):
+        center_t -= 1
+    tip_center = centers[center_t] if not np.isnan(centers[center_t]) else float(hw)
+    entry_center = centers[start_t] if not np.isnan(centers[start_t]) else float(hw)
+
+    def to_frame(t, s):
+        return (gx + t * ux + (s - hw) * px, gy + t * uy + (s - hw) * py)
+
+    tip = to_frame(float(tip_t), float(tip_center))
+    entry = to_frame(float(start_t), float(entry_center))
+    n_support = int(np.count_nonzero(present[start_t:tip_t + 1]))
+    return tip, entry, n_support
 
 
 def _signed_offset_to_line(x: float, y: float,
