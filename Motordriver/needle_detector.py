@@ -101,8 +101,12 @@ class NeedleParams:
     cone_apex_overshoot_frac: float = 0.6 # apex may extend at most this fraction of the
                                           # supported length beyond the last edge support
     cone_side_gap_min_px: float = 3.0     # min offset gap that separates the two sides
-    clahe_clip: float = 2.0               # local-contrast boost before Canny (0 = off);
-                                          # recovers washed-out needle edges near the tip
+    clahe_clip: float = 0.0               # local-contrast boost before Canny (0 = off).
+                                          # Only affects the Hough/cone fallback (the
+                                          # corridor trace reads the raw frame). Off by
+                                          # default: on the labeled calib set it changed
+                                          # only the sticker-rim fallback case, and for
+                                          # the worse (67.6 px vs 7.1 px without CLAHE).
 
     # --- Corridor trace (primary method when expected_line_px is set) ---
     # Rectify a band around the guide line and follow the needle as a

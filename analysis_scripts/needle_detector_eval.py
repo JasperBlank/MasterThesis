@@ -116,9 +116,9 @@ def main():
         print("  %s/%s: tip spread across frames dx=%.1f dy=%.1f px"
               % (set_name, side, spread[0], spread[1]))
 
-    worst = evaluate(gt, "current (cone+clahe)")
+    worst = evaluate(gt, "current (no clahe)")
     evaluate(gt, "cone off", cone_fit=False)
-    evaluate(gt, "clahe off", clahe_clip=0.0)
+    evaluate(gt, "clahe on (2.0)", clahe_clip=2.0)
     print("worst 8 cases (current):")
     for err, name, off, dang in worst[:8]:
         print("  %-34s off=%+5.1f ang=%+4.1f -> %s"

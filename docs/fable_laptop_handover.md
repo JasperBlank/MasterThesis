@@ -49,11 +49,11 @@ scene. We captured a **labeled calibration dataset** and rewrote the detector:
   pose jitter) and scores against the labels. Just run it — it finds the
   dataset by relative path.
 
-Current numbers (laptop, 2026-07-16, after the `corridor_strong_ratio` sweep):
-median 12.2 px, p95 28 px, max 89.1 px, 72.5 % within 15 px, 0 misses.
-Previous (commit `7b7fc64`, ratio hard-coded at 0.45): median 12.6, p95 53,
-max 89.7, 65.4 % within 15 px. Baseline (old Hough selection): median 42.6,
-p95 196, max 818.
+Current numbers (laptop, 2026-07-17, ratio sweep + CLAHE off): median 11.4 px,
+p95 24.2 px, max 89.1 px, 73.3 % within 15 px, 0 misses.
+Previous (commit `7b7fc64`, ratio hard-coded at 0.45, CLAHE on): median 12.6,
+p95 53, max 89.7, 65.4 % within 15 px. Baseline (old Hough selection):
+median 42.6, p95 196, max 818.
 
 ## In-flight experiment — DONE (laptop, 2026-07-16)
 
@@ -77,10 +77,19 @@ soft cast shadow. Below 0.30 the shadow creeps back in (at 0.20/0.10 the
 (`extended_min_x0_y5_left`, 67.6 px) is unchanged at every ratio — it is an
 independent residual, not a regression.
 
-New lead found while re-running the harness: with ratio 0.30, **CLAHE off is
-now slightly better than on** (median 11.4 / p95 24.2 / 73.3 % vs
-12.2 / 28.0 / 72.5 %). CLAHE was validated against the old 0.45 rule; worth
-re-testing whether it still earns its place.
+Follow-up (2026-07-17): the CLAHE lead was tested and resolved — **CLAHE is
+now off by default** (`clahe_clip = 0.0`). A per-run diff (all 240 runs,
+CLAHE 2.0 vs 0.0 at ratio 0.30) showed CLAHE never touches the corridor
+trace (it reads the raw frame); it only affects the Hough/cone fallback, and
+the *only* image where that fires is the sticker-rim case
+(`extended_min_x0_y5_left`) — where CLAHE makes it worse (67.6 px at two
+perturbations vs 7.1 px at all five without CLAHE). So disabling CLAHE fixed
+the sticker-rim residual outright. CLAHE was only introduced in `682c329`
+(the same lab session), so the old 2D servoing layer simply gets its original
+behavior back. The ratio re-sweep with CLAHE off confirms 0.30 stays the
+right default (max 89.1 vs 89.7/90.1). Remaining worst family: min-LED
+right-camera cases in the 33–41 px range plus one 89 px outlier
+(`retracted_min_x0_y0_right` at the +15 px guide perturbation).
 
 ## Other laptop-friendly work (in priority order)
 
