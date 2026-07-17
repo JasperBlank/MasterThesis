@@ -135,6 +135,17 @@ frames with detection overlays. Simulated axes only — it never commands motors
   5 Hz. Standard invocation (note the required tag size):
   `python digital_twin\twin_wasd_jog.py --pose-live --tag-edge-mm 10.62
   --anchor-ids 1,2,3 --reference-id 2 --reverse-cad-camera-order`
+- **Per-session needle-line calibration** (2026-07-17): the needle tilts inside
+  the bore clearance (measured 2.8°, exit ~0.7 mm off the nominal bore), so the
+  raw CAD axis projects up to ~12° off in an image. The tracker triangulates the
+  needle line (intersection of the two cameras' needle planes, anchored by the
+  triangulated tip) over the first `--needle-line-samples` (default 15) good
+  stereo observations and then uses it for the guide-line projection and the
+  extension measurement. Requires the needle visible in both views at startup;
+  re-seat the needle → restart the twin. Validation tool:
+  `analysis_scripts/measure_needle_guide_offset.py --seconds 60
+  [--needle-line-samples 15]` (left angle error 12.0°→3.4° with calibration;
+  residual ±15 px opposite-signed offsets are the stereo-intrinsics floor).
 - **`--reverse-cad-camera-order` is the currently correct camera↔bore mapping**;
   the `C` key toggles it at runtime.
 - **Live needle-extension estimation**: projects the CAD needle axis into each

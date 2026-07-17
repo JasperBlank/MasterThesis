@@ -228,6 +228,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--left-camera", type=int, default=0, help="Camera index for --pose-live.")
     parser.add_argument("--right-camera", type=int, default=1, help="Camera index for --pose-live.")
     parser.add_argument(
+        "--needle-line-samples",
+        type=int,
+        default=15,
+        help="Stereo needle observations to average before replacing the CAD "
+        "needle axis with the measured one (per-session bore-tilt calibration; "
+        "0 disables). Default 15.",
+    )
+    parser.add_argument(
         "--camera-calibration",
         type=Path,
         default=None,
@@ -414,6 +422,7 @@ class LiveStereoTracker:
         reference_id: int,
         anchor_ids: Tuple[int, ...],
         reverse_cad_mapping: bool,
+        needle_line_samples: int = 15,
     ) -> None:
         import cv2
 
@@ -456,6 +465,13 @@ class LiveStereoTracker:
         self.needle_detections = [None, None]
         self.needle_misses = [0, 0]
         self.needle_expected_lines = [None, None]
+        # Per-session needle-line calibration: the physical needle tilts inside
+        # the bore clearance, so the nominal CAD axis projects a few degrees
+        # off. Once enough consistent stereo needle observations accumulate,
+        # the measured line (in probe-model coords) replaces the CAD axis.
+        self.needle_line_target = int(needle_line_samples)
+        self.needle_line_buffer = []  # type: List[Tuple[np.ndarray, np.ndarray]]
+        self.needle_line_model = None  # type: Optional[Tuple[np.ndarray, np.ndarray]]
         self.last_raw_frames = None  # type: Optional[Tuple[np.ndarray, np.ndarray]]
         self.mm_per_unit = mm_per_unit
         self.camera_calibration = camera_calibration
@@ -495,20 +511,114 @@ class LiveStereoTracker:
             frames.append(frame)
         return frames[0], frames[1]
 
+    def cad_display_matrix(self, pose: Dict[str, object]) -> np.ndarray:
+        model_to_sheet = pose_matrix_from_json(pose)
+        if self.reverse_cad_mapping:
+            model_to_sheet = model_to_sheet.dot(reversed_cad_mapping_matrix())
+        return model_to_sheet
+
+    def needle_line_in_model(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Exit point (on the tip face, model y=0) and unit axis of the needle
+        in probe-model coords: the calibrated line when locked, CAD otherwise."""
+        if self.needle_line_model is not None:
+            return self.needle_line_model
+        return (
+            np.array([NEEDLE_BORE_XZ[0], 0.0, NEEDLE_BORE_XZ[1]]),
+            np.array([0.0, -1.0, 0.0]),
+        )
+
+    def collect_needle_line_sample(self, pose: Dict[str, object]) -> None:
+        """Accumulate stereo needle-line observations; lock the calibration
+        once enough consistent samples exist.
+
+        Each camera's detected 2D needle (entry + tip pixels) spans a plane
+        through the camera center; the physical needle axis is the
+        intersection of the two planes. The triangulated tip anchors the line.
+        """
+        if self.needle_line_model is not None or self.needle_line_target <= 0:
+            return
+        estimator = pose.get("needle_estimator")
+        if not isinstance(estimator, dict) or estimator.get("status") != "ok":
+            return
+        if float(estimator["ray_gap_mm"]) > 1.0:
+            return  # calibration wants tighter stereo agreement than live use
+        try:
+            normals = []
+            frame = self.last_raw_frames[0]
+            for index, side in enumerate(("left", "right")):
+                det = self.needle_detections[index]
+                _, ray_entry = self.pixel_ray_in_sheet(
+                    pose, side, (det.entry_x, det.entry_y), frame
+                )
+                _, ray_tip = self.pixel_ray_in_sheet(
+                    pose, side, (det.tip_x, det.tip_y), frame
+                )
+                normal = np.cross(ray_entry, ray_tip)
+                norm = float(np.linalg.norm(normal))
+                if norm < 1e-6:
+                    return
+                normals.append(normal / norm)
+            direction = np.cross(normals[0], normals[1])
+            norm = float(np.linalg.norm(direction))
+            if norm < 1e-6:
+                return
+            direction = direction / norm
+            model_to_sheet = self.cad_display_matrix(pose)
+            cad_axis_sheet = model_to_sheet[:3, :3].dot(np.array([0.0, -1.0, 0.0]))
+            if direction.dot(cad_axis_sheet) < 0:
+                direction = -direction
+            tip_sheet = np.asarray(estimator["tip_sheet_mm"], dtype=float)
+            # Reject wild samples: more than ~15 deg from CAD is not bore tilt.
+            if direction.dot(cad_axis_sheet / np.linalg.norm(cad_axis_sheet)) < math.cos(
+                math.radians(15.0)
+            ):
+                return
+            self.needle_line_buffer.append((tip_sheet, direction))
+        except Exception:
+            return
+        if len(self.needle_line_buffer) < self.needle_line_target:
+            return
+
+        tips = np.mean([s[0] for s in self.needle_line_buffer], axis=0)
+        mean_dir = np.mean([s[1] for s in self.needle_line_buffer], axis=0)
+        mean_dir = mean_dir / np.linalg.norm(mean_dir)
+        model_to_sheet = self.cad_display_matrix(pose)
+        rotation = model_to_sheet[:3, :3]
+        dir_model = rotation.T.dot(mean_dir)
+        dir_model = dir_model / np.linalg.norm(dir_model)
+        if dir_model[1] > 0:
+            dir_model = -dir_model  # needle protrudes toward model -y
+        tip_model = rotation.T.dot(tips - model_to_sheet[:3, 3])
+        if abs(dir_model[1]) < 1e-6:
+            return
+        t_exit = -tip_model[1] / dir_model[1]
+        exit_model = tip_model + t_exit * dir_model
+        tilt_deg = math.degrees(
+            math.acos(max(-1.0, min(1.0, -dir_model[1])))
+        )
+        self.needle_line_model = (exit_model, dir_model)
+        print(
+            "needle-line calibration locked (%d samples): exit (%.2f, %.2f) model-mm "
+            "(CAD bore %.1f, %.1f), tilt %.2f deg from the channel axis"
+            % (
+                len(self.needle_line_buffer),
+                exit_model[0], exit_model[2],
+                NEEDLE_BORE_XZ[0], NEEDLE_BORE_XZ[1],
+                tilt_deg,
+            )
+        )
+
     def projected_needle_line(
         self,
         pose: Dict[str, object],
         side: str,
         frame: np.ndarray,
     ) -> Tuple[float, float, float, float]:
-        """Project the known CAD needle axis into one live camera image."""
-        model_to_sheet = pose_matrix_from_json(pose)
-        if self.reverse_cad_mapping:
-            model_to_sheet = model_to_sheet.dot(reversed_cad_mapping_matrix())
-        exit_sheet = model_to_sheet.dot(
-            np.array([NEEDLE_BORE_XZ[0], 0.0, NEEDLE_BORE_XZ[1], 1.0])
-        )[:3]
-        axis_sheet = model_to_sheet[:3, :3].dot(np.array([0.0, -1.0, 0.0]))
+        """Project the needle axis (calibrated, else CAD) into one live image."""
+        model_to_sheet = self.cad_display_matrix(pose)
+        exit_model, axis_model = self.needle_line_in_model()
+        exit_sheet = model_to_sheet.dot(np.append(exit_model, 1.0))[:3]
+        axis_sheet = model_to_sheet[:3, :3].dot(axis_model)
         axis_sheet = axis_sheet / np.linalg.norm(axis_sheet)
         points_sheet = np.asarray(
             [exit_sheet + 3.0 * axis_sheet, exit_sheet + 30.0 * axis_sheet],
@@ -710,6 +820,13 @@ class LiveStereoTracker:
                     pose["layout_source"] = "learned-at-live-start"
                 self.update_needle_detections(left, right, pose)
                 self.add_triangulated_needle_tip(pose, left, right)
+                self.collect_needle_line_sample(pose)
+                exit_model, axis_model = self.needle_line_in_model()
+                pose["needle_line_model"] = {
+                    "exit": exit_model.tolist(),
+                    "axis": axis_model.tolist(),
+                    "calibrated": self.needle_line_model is not None,
+                }
             except Exception as exc:
                 error = str(exc)
         left_overlay = left.copy()
@@ -1019,13 +1136,17 @@ def needle_extension_measurement(
         }
     tip_sheet = np.asarray(estimator["tip_sheet_mm"], dtype=float)
     tip_world = sheet_to_world.dot(np.append(tip_sheet, 1.0))[:3]
-    exit_model = np.array(
-        [NEEDLE_BORE_XZ[0], 0.0, NEEDLE_BORE_XZ[1], 1.0], dtype=float
-    )
+    line = pose.get("needle_line_model")
+    if isinstance(line, dict):
+        exit_model = np.append(np.asarray(line["exit"], dtype=float), 1.0)
+        axis_model = np.asarray(line["axis"], dtype=float)
+    else:
+        exit_model = np.array(
+            [NEEDLE_BORE_XZ[0], 0.0, NEEDLE_BORE_XZ[1], 1.0], dtype=float
+        )
+        axis_model = np.array([0.0, -1.0, 0.0])
     exit_world = cad_display_matrix.dot(exit_model)[:3]
-    needle_axis_world = cad_display_matrix[:3, :3].dot(
-        np.array([0.0, -1.0, 0.0])
-    )
+    needle_axis_world = cad_display_matrix[:3, :3].dot(axis_model)
     needle_axis_world = needle_axis_world / np.linalg.norm(needle_axis_world)
     tip_delta = tip_world - exit_world
     extension_mm = float(tip_delta.dot(needle_axis_world))
@@ -1316,6 +1437,7 @@ def main() -> None:
             args.reference_id,
             args.anchor_ids,
             bool(args.reverse_cad_camera_order),
+            needle_line_samples=args.needle_line_samples,
         )
         left_live, right_live, pose, pose_error = live_tracker.read(True)
         live_frames = (left_live, right_live)
