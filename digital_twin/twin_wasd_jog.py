@@ -676,6 +676,15 @@ class LiveStereoTracker:
             self.needle_expected_lines[index] = expected_line
             params = self.needle_params[index]
             params.expected_line_px = expected_line
+            # While the needle-line calibration has not locked, the projected
+            # CAD axis can miss the real needle by more than the corridor
+            # half-width (scope re-seating shifts the probe-frame estimate).
+            # Search wide until locked, then track tight.
+            calibrating = (
+                self.needle_line_model is None and self.needle_line_target > 0
+            )
+            params.corridor_halfwidth_px = 100 if calibrating else 45
+            params.line_distance_max_px = 100.0 if calibrating else 40.0
             params.expected_angle_deg = (
                 math.degrees(math.atan2(expected_line[3], expected_line[2]))
                 if expected_line is not None
