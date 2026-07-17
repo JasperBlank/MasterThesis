@@ -43,7 +43,9 @@ scene. We captured a **labeled calibration dataset** and rewrote the detector:
   whose contrast is comparable to the needle's shaft
   (`>= max(corridor_min_contrast, 0.45 * median(first-half contrast))`).
   Fallbacks in order: cone-fit (intersect the needle's two converging side
-  edges), single-Hough-line. CLAHE preprocessing is on by default.
+  edges), single-Hough-line. (As written on 2026-07-16 the strong-contrast
+  ratio was hard-coded 0.45 and CLAHE was on by default — both since changed
+  on the laptop, see the sections below.)
 - Evaluation harness: `analysis_scripts/needle_detector_eval.py`. Runs the
   detector on all 48 images × 5 guide-line perturbations (simulating the live
   pose jitter) and scores against the labels. Just run it — it finds the
@@ -109,6 +111,18 @@ right-camera cases in the 33–41 px range plus one 89 px outlier
 - The decisive **needle travel test** (retract → extend a known distance,
   compare raw vs rendered extension in the five-panel twin) — waiting on
   bench time, detector is now good enough for it to be meaningful.
+- **Measure the systematic guide-line offset** (added 2026-07-17, laptop
+  analysis): the detector tolerates guide misalignment up to ~±20 px with a
+  clean tail; p95 doubles by ±30 px and it breaks past ~±45 px (the corridor
+  half-width). The projected CAD needle line carries systematic error from
+  (a) needle exit-tilt clearance in the Ø1.0 bore behind the Ø0.5 face
+  orifice (~2–3° possible ≈ 50 px at 20 mm) and (b) scope tilt biasing the
+  inferred probe frame. Experiment: run the twin, log projected vs detected
+  needle line for ~1 min; mean = systematic part, spread = jitter. If the
+  mean exceeds ~10–15 px, build a per-session needle-line calibration
+  (triangulate the detected entry+tip lines from both cameras at a known
+  extension, store the correction from CAD line to real line — same idea as
+  the startup scope-orientation step).
 - Any live validation of the detector in the twin
   (`python digital_twin\twin_wasd_jog.py --pose-live --tag-edge-mm 10.62
   --anchor-ids 1,2,3 --reference-id 2 --reverse-cad-camera-order`).
